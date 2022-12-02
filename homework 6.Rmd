@@ -1,0 +1,8 @@
+---
+title: "Homework 6"
+author: "yh3429"
+date: "2022-12-02"
+output: html_document
+---
+
+
