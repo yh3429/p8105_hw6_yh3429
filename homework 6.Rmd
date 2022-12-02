@@ -2,7 +2,97 @@
 title: "Homework 6"
 author: "yh3429"
 date: "2022-12-02"
-output: html_document
+output: github_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 
+## Problem 2
+
+```{r , message = FALSE}
+library (tidyverse)
+library(ggplot2)
+```
+
+##### Read raw data 
+```{r}
+raw_df = read_csv("./data/homicide-data.csv") 
+```
+There are 52,179 observations and 12 variables in the raw dataset. And the key variables include `city`, `state`, `dispostion`, and so on. 
+
+##### Data cleaning
+```{r}
+homicide_df = raw_df %>%
+  janitor::clean_names() %>%
+  filter (city != "Dallas" & city !="Phoenix"& 
+          city != "Kansas City"& city !="Tulsa") %>%  
+  filter (victim_race == c("White", "Black")) %>% 
+  mutate (city_state = str_c (city, ",", state),
+          resolved = as.numeric(disposition == "Closed by arrest"),     
+          victim_age = as.numeric(victim_age))
+
+
+homicide_df
+```
+
+##### For the city of Baltimore,MD
+```{r}
+baltimore_df =
+  homicide_df %>% filter (city_state == "Baltimore,MD") %>% 
+  select(resolved, victim_age, victim_race, victim_sex)
+
+fit_logi_balt = 
+  baltimore_df %>% 
+  glm(resolved ~ victim_age + victim_race + victim_sex, data = ., family = binomial()) 
+
+logi_balt_tidy=  
+fit_logi_balt %>% 
+  broom::tidy() %>% 
+  mutate(OR = exp(estimate),
+         OR.conf.low = exp(estimate -1.96*std.error),
+         OR.conf.high = exp(estimate +1.96*std.error)) %>%
+  select(term, log_OR = estimate, OR, OR.conf.low, OR.conf.high ) %>% 
+  filter (term == "victim_sexMale")
+
+logi_balt_tidy 
+```
+So, we can get the adjusted odds ratio comparing male victims to female victims is 0.391 (95% C:0.266, 0.573), keeping all other variables fixed.
+
+##### For each of the cities
+```{r}
+fit_logi_each =
+   homicide_df %>% 
+   select(city_state, resolved, victim_age, victim_race, victim_sex) %>% 
+   nest (data = -city_state) %>% 
+   mutate(models = map(data, ~glm(resolved ~ victim_age + victim_race + victim_sex, 
+                                  data = .x, family = binomial())), 
+          results = map(models, broom::tidy)) %>% 
+  unnest(results) %>% 
+   mutate(OR = exp(estimate),
+         OR.conf.low = exp(estimate -1.96*std.error),
+         OR.conf.high = exp(estimate +1.96*std.error)) %>%
+  select(city_state, term, log_OR = estimate, OR, OR.conf.low, OR.conf.high ) %>% 
+  filter (term == "victim_sexMale") 
+
+
+  fit_logi_each 
+```
+
+##### Create a plot
+```{r}
+each_city_pl =
+   fit_logi_each %>%  
+  mutate(city_state = fct_reorder(city_state, OR)) %>% 
+  ggplot (aes(x=city_state, y=OR))+ geom_point()+
+  geom_errorbar(aes(ymin=OR.conf.low, ymax=OR.conf.high), width=.2,
+                 position=position_dodge(.05)) +
+  labs(x = "City, State",
+       y = "The estimated ORs",
+       title = "The estimated ORs and CIs for each city") +
+  theme(axis.text.x = element_text(angle = 65, hjust = 1))
+  
+each_city_pl
+```
+
+Based on the plot, the smallest OR is Baton Rouge, LA and the largest OR is Albuquerque, NM. And there are few cities with the relatively larger confidence intervals, including Long Beach, Fresno, Savannah, Tampa, Richmond, Stockton, and Albuquerque. 
