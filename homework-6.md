@@ -3,6 +3,106 @@ Homework 6
 yh3429
 2022-12-02
 
+## Problem 1
+
+``` r
+library(tidyverse)
+```
+
+    ## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.2 ──
+    ## ✔ ggplot2 3.3.6     ✔ purrr   0.3.4
+    ## ✔ tibble  3.1.8     ✔ dplyr   1.0.9
+    ## ✔ tidyr   1.2.0     ✔ stringr 1.4.1
+    ## ✔ readr   2.1.2     ✔ forcats 0.5.2
+    ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ✖ dplyr::filter() masks stats::filter()
+    ## ✖ dplyr::lag()    masks stats::lag()
+
+``` r
+library(modelr)
+```
+
+To obtain a distribution for $\hat{r}^2$, we’ll follow basically the
+same procedure we used for regression coefficients: draw bootstrap
+samples; the a model to each; extract the value I’m concerned with; and
+summarize. Here, we’ll use `modelr::bootstrap` to draw the samples and
+`broom::glance` to produce `r.squared` values.
+
+``` r
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+    ## Registered S3 method overwritten by 'hoardr':
+    ##   method           from
+    ##   print.cache_info httr
+
+    ## using cached file: C:\Users\Owner\AppData\Local/Cache/R/noaa_ghcnd/USW00094728.dly
+
+    ## date created (size, mb): 2022-09-29 10:33:10 (8.418)
+
+    ## file min/max dates: 1869-01-01 / 2022-09-30
+
+``` r
+weather_df %>% 
+  modelr::bootstrap(n = 1000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x) ),
+    results = map(models, broom::glance)) %>% 
+  select(-strap, -models) %>% 
+  unnest(results) %>% 
+  ggplot(aes(x = r.squared)) + geom_density()
+```
+
+![](homework-6_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+
+In this example, the $\hat{r}^2$ value is high, and the upper bound at 1
+may be a cause for the generally skewed shape of the distribution. If we
+wanted to construct a confidence interval for $R^2$, we could take the
+2.5% and 97.5% quantiles of the estimates across bootstrap samples.
+However, because the shape isn’t symmetric, using the mean +/- 1.96
+times the standard error probably wouldn’t work well.
+
+We can produce a distribution for $\log(\beta_0 * \beta1)$ using a
+similar approach, with a bit more wrangling before we make our plot.
+
+``` r
+weather_df %>% 
+  modelr::bootstrap(n = 1000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x) ),
+    results = map(models, broom::tidy)) %>% 
+  select(-strap, -models) %>% 
+  unnest(results) %>% 
+  select(id = `.id`, term, estimate) %>% 
+  pivot_wider(
+    names_from = term, 
+    values_from = estimate) %>% 
+  rename(beta0 = `(Intercept)`, beta1 = tmin) %>% 
+  mutate(log_b0b1 = log(beta0 * beta1)) %>% 
+  ggplot(aes(x = log_b0b1)) + geom_density()
+```
+
+![](homework-6_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+
+As with $r^2$, this distribution is somewhat skewed and has some
+outliers.
+
+The point of this is not to say you should always use the bootstrap –
+it’s possible to establish “large sample” distributions for strange
+parameters / values / summaries in a lot of cases, and those are great
+to have. But it is helpful to know that there’s a way to do inference
+even in tough cases.
+
 ## Problem 2
 
 ``` r
@@ -150,7 +250,7 @@ each_city_pl =
 each_city_pl
 ```
 
-![](homework-6_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](homework-6_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 Based on the plot, the smallest OR is Baton Rouge, LA and the largest OR
 is Albuquerque, NM. And there are few cities with the relatively larger
