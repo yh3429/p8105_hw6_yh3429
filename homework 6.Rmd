@@ -246,7 +246,7 @@ cv_df =
   mutate(
     fit_mod  = map(train, ~lm(bwt ~ babysex + bhead + blength + wtgain, data = .x)),
     main_mod  = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
-    interaction_mod  = map(train,  ~lm(bwt ~ babysex + bhead + blength  + babysex*bhead + babysex*blength + bhead*blength, data = .x))) %>% 
+    interaction_mod  = map(train,  ~lm(bwt ~ babysex + bhead + blength  + babysex*bhead + babysex*blength + bhead*blength + babysex*bhead*blength, data = .x))) %>% 
   mutate(
     rmse_fit = map2_dbl(fit_mod, test, ~rmse(model = .x, data = .y)),
     rmse_main = map2_dbl(main_mod, test, ~rmse(model = .x, data = .y)),
