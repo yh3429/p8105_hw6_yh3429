@@ -73,6 +73,7 @@ The point of this is not to say you should always use the bootstrap -- it's poss
 ```{r , message = FALSE}
 library (tidyverse)
 library(ggplot2)
+set.seed(1)
 ```
 
 ##### Read raw data 
@@ -85,11 +86,11 @@ There are 52,179 observations and 12 variables in the raw dataset. And the key v
 ```{r}
 homicide_df = raw_df %>%
   janitor::clean_names() %>%
-  filter (city != "Dallas" & city !="Phoenix"& 
-          city != "Kansas City"& city !="Tulsa") %>%  
+  mutate (city_state = str_c (city, ",", state)) %>% 
+  filter (city_state != "Dallas,TX" & city_state !="Phoenix,AZ"& 
+          city_state != "Kansas City,MO"& city_state !="Tulsa,AL") %>%  
   filter (victim_race == c("White", "Black")) %>% 
-  mutate (city_state = str_c (city, ",", state),
-          resolved = as.numeric(disposition == "Closed by arrest"),     
+  mutate (resolved = as.numeric(disposition == "Closed by arrest"),     
           victim_age = as.numeric(victim_age))
 
 
@@ -117,7 +118,7 @@ fit_logi_balt %>%
 
 logi_balt_tidy 
 ```
-So, we can get the adjusted odds ratio comparing male victims to female victims is 0.391 (95% C:0.266, 0.573), keeping all other variables fixed.
+So, we can get the adjusted odds ratio comparing male victims to female victims is 0.391 (95% CI:0.266, 0.573), keeping all other variables fixed.
 
 ##### For each of the cities
 ```{r}
@@ -156,3 +157,18 @@ each_city_pl
 ```
 
 Based on the plot, the smallest OR is Baton Rouge, LA and the largest OR is Albuquerque, NM. And there are few cities with the relatively larger confidence intervals, including Long Beach, Fresno, Savannah, Tampa, Richmond, Stockton, and Albuquerque. 
+
+
+
+
+## Problem 3
+
+##### Read raw data 
+```{r}
+raw_birthweight = read_csv("./data/birthweight.csv") 
+```
+There are 4,342 observations and 20 variables in the raw dataset. And the key variables include `babysex`, `bhead`, `bwt`, and so on. 
+
+##### Data Cleaning
+
+

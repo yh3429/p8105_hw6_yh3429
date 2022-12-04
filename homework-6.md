@@ -108,6 +108,7 @@ even in tough cases.
 ``` r
 library (tidyverse)
 library(ggplot2)
+set.seed(1)
 ```
 
 ##### Read raw data
@@ -133,13 +134,16 @@ the key variables include `city`, `state`, `dispostion`, and so on.
 ``` r
 homicide_df = raw_df %>%
   janitor::clean_names() %>%
-  filter (city != "Dallas" & city !="Phoenix"& 
-          city != "Kansas City"& city !="Tulsa") %>%  
+  mutate (city_state = str_c (city, ",", state)) %>% 
+  filter (city_state != "Dallas,TX" & city_state !="Phoenix,AZ"& 
+          city_state != "Kansas City,MO"& city_state !="Tulsa,AL") %>%  
   filter (victim_race == c("White", "Black")) %>% 
-  mutate (city_state = str_c (city, ",", state),
-          resolved = as.numeric(disposition == "Closed by arrest"),     
+  mutate (resolved = as.numeric(disposition == "Closed by arrest"),     
           victim_age = as.numeric(victim_age))
 ```
+
+    ## Warning in victim_race == c("White", "Black"): longer object length is not a
+    ## multiple of shorter object length
 
     ## Warning in mask$eval_all_mutate(quo): NAs introduced by coercion
 
@@ -147,7 +151,7 @@ homicide_df = raw_df %>%
 homicide_df
 ```
 
-    ## # A tibble: 19,547 × 14
+    ## # A tibble: 19,802 × 14
     ##    uid   repor…¹ victi…² victi…³ victi…⁴ victi…⁵ victi…⁶ city  state   lat   lon
     ##    <chr>   <dbl> <chr>   <chr>   <chr>     <dbl> <chr>   <chr> <chr> <dbl> <dbl>
     ##  1 Alb-…  2.01e7 SATTER… VIVIANA White        15 Female  Albu… NM     35.1 -107.
@@ -160,7 +164,7 @@ homicide_df
     ##  8 Alb-…  2.01e7 TURNER  MICHEL… White        36 Female  Albu… NM     35.1 -107.
     ##  9 Alb-…  2.01e7 CHECKL… MICHAEL White        24 Male    Albu… NM     35.2 -107.
     ## 10 Alb-…  2.01e7 STOWE   KIMBREL White        50 Male    Albu… NM     35.1 -107.
-    ## # … with 19,537 more rows, 3 more variables: disposition <chr>,
+    ## # … with 19,792 more rows, 3 more variables: disposition <chr>,
     ## #   city_state <chr>, resolved <dbl>, and abbreviated variable names
     ## #   ¹​reported_date, ²​victim_last, ³​victim_first, ⁴​victim_race, ⁵​victim_age,
     ## #   ⁶​victim_sex
@@ -194,7 +198,7 @@ logi_balt_tidy
     ## 1 victim_sexMale -0.940 0.391       0.266        0.573
 
 So, we can get the adjusted odds ratio comparing male victims to female
-victims is 0.391 (95% C:0.266, 0.573), keeping all other variables
+victims is 0.391 (95% CI:0.266, 0.573), keeping all other variables
 fixed.
 
 ##### For each of the cities
@@ -218,7 +222,7 @@ fit_logi_each =
   fit_logi_each 
 ```
 
-    ## # A tibble: 46 × 6
+    ## # A tibble: 47 × 6
     ##    city_state     term            log_OR    OR OR.conf.low OR.conf.high
     ##    <chr>          <chr>            <dbl> <dbl>       <dbl>        <dbl>
     ##  1 Albuquerque,NM victim_sexMale  0.736  2.09        0.698        6.25 
@@ -231,7 +235,7 @@ fit_logi_each =
     ##  8 Charlotte,NC   victim_sexMale -0.425  0.654       0.322        1.33 
     ##  9 Chicago,IL     victim_sexMale -0.923  0.397       0.301        0.524
     ## 10 Cincinnati,OH  victim_sexMale -1.01   0.364       0.166        0.802
-    ## # … with 36 more rows
+    ## # … with 37 more rows
 
 ##### Create a plot
 
@@ -256,3 +260,24 @@ Based on the plot, the smallest OR is Baton Rouge, LA and the largest OR
 is Albuquerque, NM. And there are few cities with the relatively larger
 confidence intervals, including Long Beach, Fresno, Savannah, Tampa,
 Richmond, Stockton, and Albuquerque.
+
+## Problem 3
+
+##### Read raw data
+
+``` r
+raw_birthweight = read_csv("./data/birthweight.csv") 
+```
+
+    ## Rows: 4342 Columns: 20
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## Delimiter: ","
+    ## dbl (20): babysex, bhead, blength, bwt, delwt, fincome, frace, gaweeks, malf...
+    ## 
+    ## ℹ Use `spec()` to retrieve the full column specification for this data.
+    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+There are 4,342 observations and 20 variables in the raw dataset. And
+the key variables include `babysex`, `bhead`, `bwt`, and so on.
+
+##### Data Cleaning
