@@ -292,3 +292,169 @@ birthweight_df = raw_birthweight %>%
     mrace = factor(mrace, levels = c(1,2,3,4,8), labels = c("White","Black","Asian","Puerto Rican", "Other"))
   )
 ```
+
+##### Propose a regression model for birthweight
+
+``` r
+fit_mod = lm(bwt ~ babysex + bhead + blength + wtgain, data = birthweight_df)
+
+fit_mod %>%   broom::tidy()
+```
+
+    ## # A tibble: 5 × 5
+    ##   term          estimate std.error statistic   p.value
+    ##   <chr>            <dbl>     <dbl>     <dbl>     <dbl>
+    ## 1 (Intercept)   -6022.      97.3      -61.9  0        
+    ## 2 babysexfemale    41.1      8.80       4.67 3.05e-  6
+    ## 3 bhead           146.       3.49      41.7  6.11e-320
+    ## 4 blength          83.1      2.06      40.3  3.40e-302
+    ## 5 wtgain            3.72     0.405      9.19 6.10e- 20
+
+The model is based on the the related factors that underly birthweight.
+
+##### Examining residuals and predictions
+
+``` r
+modelr::add_residuals(birthweight_df, fit_mod)
+```
+
+    ## # A tibble: 4,342 × 21
+    ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
+    ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
+    ##  1 female     34      51  3629   177      35 White    39.9 absent        13
+    ##  2 male       34      48  3062   156      65 Black    25.9 absent        14
+    ##  3 female     36      50  3345   148      85 White    39.9 absent        12
+    ##  4 male       34      52  3062   157      55 White    40   absent        14
+    ##  5 female     34      52  3374   156       5 White    41.6 absent        13
+    ##  6 male       33      52  3374   129      55 White    40.7 absent        12
+    ##  7 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  8 female     33      49  2778   140       5 White    37.4 absent        12
+    ##  9 male       36      52  3515   146      85 White    40.3 absent        11
+    ## 10 male       33      50  3459   169      75 Black    40.7 absent        12
+    ## # … with 4,332 more rows, and 11 more variables: mheight <dbl>, momage <dbl>,
+    ## #   mrace <fct>, parity <dbl>, pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>,
+    ## #   ppwt <dbl>, smoken <dbl>, wtgain <dbl>, resid <dbl>
+
+``` r
+modelr::add_predictions(birthweight_df, fit_mod)
+```
+
+    ## # A tibble: 4,342 × 21
+    ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
+    ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
+    ##  1 female     34      51  3629   177      35 White    39.9 absent        13
+    ##  2 male       34      48  3062   156      65 Black    25.9 absent        14
+    ##  3 female     36      50  3345   148      85 White    39.9 absent        12
+    ##  4 male       34      52  3062   157      55 White    40   absent        14
+    ##  5 female     34      52  3374   156       5 White    41.6 absent        13
+    ##  6 male       33      52  3374   129      55 White    40.7 absent        12
+    ##  7 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  8 female     33      49  2778   140       5 White    37.4 absent        12
+    ##  9 male       36      52  3515   146      85 White    40.3 absent        11
+    ## 10 male       33      50  3459   169      75 Black    40.7 absent        12
+    ## # … with 4,332 more rows, and 11 more variables: mheight <dbl>, momage <dbl>,
+    ## #   mrace <fct>, parity <dbl>, pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>,
+    ## #   ppwt <dbl>, smoken <dbl>, wtgain <dbl>, pred <dbl>
+
+``` r
+birthweight_df %>% 
+  modelr::add_residuals(fit_mod) %>% 
+  ggplot(aes(x = babysex, y = resid)) + geom_violin()
+```
+
+![](homework-6_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+``` r
+birthweight_df %>% 
+  modelr::add_residuals(fit_mod) %>% 
+  ggplot(aes(x = bhead, y = resid)) + geom_point()
+```
+
+![](homework-6_files/figure-gfm/unnamed-chunk-12-2.png)<!-- -->
+
+``` r
+birthweight_df %>% 
+  modelr::add_residuals(fit_mod) %>% 
+  ggplot(aes(x = blength, y = resid)) + geom_point()
+```
+
+![](homework-6_files/figure-gfm/unnamed-chunk-12-3.png)<!-- -->
+
+``` r
+birthweight_df %>% 
+  modelr::add_residuals(fit_mod) %>% 
+  ggplot(aes(x = wtgain, y = resid)) + geom_point()
+```
+
+![](homework-6_files/figure-gfm/unnamed-chunk-12-4.png)<!-- -->
+
+##### Plot for model residuals and fitted values
+
+``` r
+birthweight_df %>% 
+  add_predictions(fit_mod) %>% 
+  add_residuals(fit_mod) %>% 
+  ggplot(aes(x = resid, y = pred)) +
+  geom_point(size=0.5) +
+  labs(
+    title = "Residuals and Fitted Values", 
+    x = " Residuals", 
+    y = "Fitted values (Predictions)")
+```
+
+![](homework-6_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+##### Compare with two other models
+
+This comparison using in terms of the cross-validated prediction error
+
+``` r
+cv_df = 
+  crossv_mc(birthweight_df, 100) 
+
+cv_df =
+  cv_df %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
+```
+
+``` r
+cv_df = 
+  cv_df %>% 
+  mutate(
+    fit_mod  = map(train, ~lm(bwt ~ babysex + bhead + blength + wtgain, data = .x)),
+    main_mod  = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    interaction_mod  = map(train,  ~lm(bwt ~ babysex + bhead + blength  + babysex*bhead + babysex*blength + bhead*blength, data = .x))) %>% 
+  mutate(
+    rmse_fit = map2_dbl(fit_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_main = map2_dbl(main_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_interaction = map2_dbl(interaction_mod, test, ~rmse(model = .x, data = .y)))
+```
+
+``` r
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()+
+  labs(
+    title = "The RMSEs for the three models", 
+    x = " Model Name", 
+    y = "RMSEs")
+```
+
+![](homework-6_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
+Based on these results, since the fit model and interaction model had
+the relatively smaller root mean squared errors (RMSEs) than the main
+model. It can justify the fit model and interaction model are better
+than the main model. The fit model looks a little bit better than the
+interaction model. But the difference between the fit model and
+interaction model is not obvious. It still needs to further examine and
+discuss, such as may need to balance goodness of fit and
+interpretability.

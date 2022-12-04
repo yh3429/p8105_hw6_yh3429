@@ -181,3 +181,92 @@ birthweight_df = raw_birthweight %>%
   )
 ```
 
+##### Propose a regression model for birthweight
+```{r}
+fit_mod = lm(bwt ~ babysex + bhead + blength + wtgain, data = birthweight_df)
+
+fit_mod %>%   broom::tidy()
+  
+```
+The model is based on the the related factors that underly birthweight.
+
+##### Examining residuals and predictions
+```{r}
+modelr::add_residuals(birthweight_df, fit_mod)
+modelr::add_predictions(birthweight_df, fit_mod)
+
+birthweight_df %>% 
+  modelr::add_residuals(fit_mod) %>% 
+  ggplot(aes(x = babysex, y = resid)) + geom_violin()
+
+birthweight_df %>% 
+  modelr::add_residuals(fit_mod) %>% 
+  ggplot(aes(x = bhead, y = resid)) + geom_point()
+
+birthweight_df %>% 
+  modelr::add_residuals(fit_mod) %>% 
+  ggplot(aes(x = blength, y = resid)) + geom_point()
+
+birthweight_df %>% 
+  modelr::add_residuals(fit_mod) %>% 
+  ggplot(aes(x = wtgain, y = resid)) + geom_point()
+```
+
+##### Plot for model residuals and fitted values
+```{r}
+birthweight_df %>% 
+  add_predictions(fit_mod) %>% 
+  add_residuals(fit_mod) %>% 
+  ggplot(aes(x = resid, y = pred)) +
+  geom_point(size=0.5) +
+  labs(
+    title = "Residuals and Fitted Values", 
+    x = " Residuals", 
+    y = "Fitted values (Predictions)")
+```
+
+##### Compare with two other models
+
+This comparison using in terms of the cross-validated prediction error
+```{r}
+cv_df = 
+  crossv_mc(birthweight_df, 100) 
+
+cv_df =
+  cv_df %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
+```
+
+
+```{r}
+cv_df = 
+  cv_df %>% 
+  mutate(
+    fit_mod  = map(train, ~lm(bwt ~ babysex + bhead + blength + wtgain, data = .x)),
+    main_mod  = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    interaction_mod  = map(train,  ~lm(bwt ~ babysex + bhead + blength  + babysex*bhead + babysex*blength + bhead*blength, data = .x))) %>% 
+  mutate(
+    rmse_fit = map2_dbl(fit_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_main = map2_dbl(main_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_interaction = map2_dbl(interaction_mod, test, ~rmse(model = .x, data = .y)))
+```
+
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()+
+  labs(
+    title = "The RMSEs for the three models", 
+    x = " Model Name", 
+    y = "RMSEs")
+```
+
+Based on these results, since the fit model and interaction model had the relatively smaller root mean squared errors (RMSEs) than the main model. It can justify the fit model and interaction model are better than the main model. The fit model looks a little bit better than the interaction model. But the difference between the fit model and interaction model is not obvious. It still needs to further examine and discuss, such as may need to balance goodness of fit and interpretability.
