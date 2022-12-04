@@ -281,3 +281,14 @@ There are 4,342 observations and 20 variables in the raw dataset. And
 the key variables include `babysex`, `bhead`, `bwt`, and so on.
 
 ##### Data Cleaning
+
+``` r
+birthweight_df = raw_birthweight %>% 
+  janitor::clean_names() %>% drop_na() %>% 
+  mutate (
+    babysex = factor(babysex, levels = c(1,2), labels = c("male", "female")),
+    frace = factor(frace, levels = c(1,2,3,4,8,9), labels = c("White","Black","Asian","Puerto Rican","Other","Unknown")),
+    malform = factor(malform,levels = c(0,1),  labels = c("absent", "present")),
+    mrace = factor(mrace, levels = c(1,2,3,4,8), labels = c("White","Black","Asian","Puerto Rican", "Other"))
+  )
+```
